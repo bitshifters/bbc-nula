@@ -1,3 +1,7 @@
+LOAD_ADDR = &3000-64
+HIDE_DISPLAY = TRUE
+USE_SWR = TRUE
+
 ORG 0
 INCLUDE "lib/exomiser.h.asm"
 
@@ -5,6 +9,8 @@ INCLUDE "lib/exomiser.h.asm"
 .has_shadow     SKIP 1
 
 ORG &1900
+GUARD LOAD_ADDR
+
 .start
 INCLUDE "lib/bbc.h.asm"
 INCLUDE "lib/exomiser.asm"
@@ -20,9 +26,7 @@ INCLUDE "lib/disksys.asm"
 
 .osfile_params			SKIP 18
 
-LOAD_ADDR = &3000-64
-HIDE_DISPLAY = FALSE
-USE_SWR = FALSE
+
 
 .main
 {
@@ -38,12 +42,9 @@ IF USE_SWR
     sta has_swr
     bne no_swr
 
-    ; page in SWR slot 0
-    lda #0
-    jsr swr_select_slot
 
     ; fetch & cache disk catalog
-    jsr disksys_fetch_catalogue    
+    ;jsr disksys_fetch_catalogue    
     
 .no_swr
 ENDIF
@@ -109,6 +110,8 @@ ENDIF
     lda #0      ; a=0 = close file
     jsr &ffce   ; osfind
 
+
+    
     ; fetch the file information
 	ldx #LO(file_name)
 	ldy #HI(file_name)
@@ -120,8 +123,6 @@ ENDIF
     lda #255
     sta osfile_params+6
 
-    ldx #LO(osfile_params)
-    ldy #HI(osfile_params)
 
 IF USE_SWR
     ldx #&ff    ; load file to specified memory & also put file info to param block
@@ -133,7 +134,12 @@ IF USE_SWR
 ELSE
     lda #&ff
 ENDIF
+
+    ldx #LO(osfile_params)
+    ldy #HI(osfile_params)
+
     jsr &ffdd   ; osfile
+
 
 IF USE_SWR
     lda has_swr
@@ -145,6 +151,10 @@ IF USE_SWR
     lda file_num+1
     sta file_swr+1
 
+    ; page in SWR slot 0
+    lda #0
+    jsr swr_select_slot
+
     lda #&80
     ldx #LO(file_swr)
     ldy #HI(file_swr)
@@ -153,18 +163,6 @@ IF USE_SWR
 .skip_swr_load
 ENDIF
 
-
-    if 0
-    ; can load as well as get the file attributes
-
-
-    ; load next file
-	ldx #LO(load_file)
-	ldy #HI(load_file)
-	jsr &fff7	; oscli
-    endif
-
-
     sei
 
     ; file loaded, so unpack it from load-address to exec-address
@@ -172,11 +170,12 @@ ENDIF
     ldy osfile_params+3
 
 IF USE_SWR
+    ; unpack from SWR instead of main ram if SWR is present
     lda has_swr
     beq go_exo
 
-    ; unpack from SWR instead of main ram
-    ldx #0
+    ; override exo source data stream
+    ldx #&00
     ldy #&80
 
 .go_exo
@@ -184,23 +183,21 @@ ENDIF
 
 	jsr exo_init_decruncher    
 
+    ; now unpack to the execute address of the loaded file
     ldx osfile_params+6
     ldy osfile_params+7
 
 IF USE_SWR
-    lda has_swr
-    bne go_exo2
-
-    ; exomizer doesn't decompress 'in place' so we have to leave a buffer, we just offset unpack address by one page to make the maths easier
-    dey
-
-.go_exo2
 ELSE
     ; exomizer doesn't decompress 'in place' so we have to leave a buffer, we just offset unpack address by one page to make the maths easier
     dey
 ENDIF
 
     jsr exo_unpack
+
+    ; no need to relocate if SWR used
+    lda has_swr
+    bne skip_relocate
 
     ; relocate the unpacked image by one page. nasty but necessary.
 .relocate
@@ -221,6 +218,8 @@ ENDIF
     lda relocate_addr1+2
     cmp #&2e
     bne relocate_loop
+
+.skip_relocate
 
     ; set palette, if present
     lda LOAD_ADDR
