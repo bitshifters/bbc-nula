@@ -1,0 +1,15 @@
+PUTFILE "output/volume2/beeb.png.bbc.exo", "A.01", &5816, &2fc0
+PUTFILE "output/volume2/earth.png.bbc.exo", "A.02", &6286, &2fc0
+PUTFILE "output/volume2/elite.png.bbc.exo", "A.03", &69d4, &2fc0
+PUTFILE "output/volume2/fashion.png.bbc.exo", "A.04", &540a, &2fc0
+PUTFILE "output/volume2/lenna.png.bbc.exo", "A.05", &53e2, &2fc0
+PUTFILE "output/volume2/lighthouse.png.bbc.exo", "A.06", &5102, &2fc0
+PUTFILE "output/volume2/logo.png.bbc.exo", "A.07", &7968, &2fc0
+PUTFILE "output/volume2/mario.png.bbc.exo", "A.08", &72d9, &2fc0
+PUTFILE "output/volume2/moon.png.bbc.exo", "A.09", &561e, &2fc0
+PUTFILE "output/volume2/parrot.png.bbc.exo", "A.10", &52f6, &2fc0
+PUTFILE "output/volume2/parrots.png.bbc.exo", "A.11", &5bae, &2fc0
+PUTFILE "output/volume2/teapot.png.bbc.exo", "A.12", &7350, &2fc0
+PUTFILE "output/volume2/test.png.bbc.exo", "A.13", &7b5d, &2fc0
+PUTFILE "output/volume2/tiger.png.bbc.exo", "A.14", &4b78, &2fc0
+PUTFILE "output/volume2/tut2.png.bbc.exo", "A.15", &5671, &2fc0

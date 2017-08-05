@@ -1,0 +1,11 @@
+{
+    "root": {
+        "New folder": {},
+        "volume1": {
+            "palette": 16
+        },
+        "volume2": {}
+    },
+    "source": "images/",
+    "target": "output/"
+}
