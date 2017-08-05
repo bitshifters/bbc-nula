@@ -3,10 +3,11 @@
 ; http://chrisacorns.computinghistory.org.uk/docs/Acorn/Manuals/Acorn_DiscSystemUGI2.pdf
 ; Our SWR loader is 60% faster than *SRLOAD
 
-ALIGN 256
-.SCRATCH_RAM_ADDR SKIP 1024
-
 DISKSYS_DEBUG = FALSE
+
+ALIGN 256
+.SCRATCH_RAM_ADDR SKIP 2048
+
 DISKSYS_CATALOG_ADDR = SCRATCH_RAM_ADDR
 DISKSYS_BUFFER_ADDR = DISKSYS_CATALOG_ADDR+512 ; &1000 ; must be page aligned
 DISKSYS_BUFFER_SIZE = 1 ; SECTORS TO READ, MUST BE ONE (for now)
@@ -273,16 +274,6 @@ ENDIF
     rts
 }
 
-
-.disksys_fetch_catalogue
-{
-    ; load 512 byte disk catalogue to DISKSYS_CATALOG_ADDR to DISKSYS_CATALOG_ADDR+512
-    ldx #LO(DISKSYS_CATALOG_ADDR)
-    ldy #HI(DISKSYS_CATALOG_ADDR)
-    jsr disksys_read_catalogue    
-    rts
-}
-
 ;--------------------------------------------------------------
 ; Load a file from disk to memory (SWR supported)
 ; Loads in sector granularity so will always write to page aligned address
@@ -302,13 +293,10 @@ ENDIF
 
     txa:pha:tya:pha
 
-; PARTY HACK - skip this for faster loading
-IF 0
     ; load 512 byte disk catalogue to DISKSYS_CATALOG_ADDR to DISKSYS_CATALOG_ADDR+512
     ldx #LO(DISKSYS_CATALOG_ADDR)
     ldy #HI(DISKSYS_CATALOG_ADDR)
     jsr disksys_read_catalogue
-ENDIF
 
     pla:tay:pla:tax
 
