@@ -1,11 +1,22 @@
 {
     "root": {
-        "New folder": {},
-        "logo": {},
-        "volume1": {
+        "logo": {
+            "dither": 0,
             "palette": 16
         },
-        "volume2": {}
+        "volume1": {
+            "dither": 0,
+            "palette": 16
+        },
+        "volume2": {
+            "dither": 1,
+            "palette": 16
+        },
+        "volume3": {
+            "dither": 1,
+            "palette": 16            
+        },
+        "wip": {}
     },
     "source": "images/",
     "target": "output/"

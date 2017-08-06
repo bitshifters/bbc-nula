@@ -1,0 +1,9 @@
+PUTFILE "output/volume3/earth.png.bbc.exo", "A.01", &6286, &2fc0
+PUTFILE "output/volume3/fashion.png.bbc.exo", "A.02", &540a, &2fc0
+PUTFILE "output/volume3/lenna.png.bbc.exo", "A.03", &53e2, &2fc0
+PUTFILE "output/volume3/lighthouse.png.bbc.exo", "A.04", &5102, &2fc0
+PUTFILE "output/volume3/monalisa.png.bbc.exo", "A.05", &6689, &2fc0
+PUTFILE "output/volume3/moon.png.bbc.exo", "A.06", &561e, &2fc0
+PUTFILE "output/volume3/parrot.png.bbc.exo", "A.07", &52f6, &2fc0
+PUTFILE "output/volume3/sharbat.png.bbc.exo", "A.08", &671b, &2fc0
+PUTFILE "output/volume3/tiger.png.bbc.exo", "A.09", &4b78, &2fc0

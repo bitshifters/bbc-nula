@@ -16,7 +16,7 @@
 
 # options
 OUTPUT_FORMAT = "png"
-FORCE_UPDATE = True
+FORCE_UPDATE = True		# has to be True atm because configs dont get build properly otherwise (TODO!)
 EXO_COMPRESS = True
 
 # bbc file format
@@ -344,14 +344,14 @@ class AssetManager:
 					#   square - force output image to be square (adds padding on smallest dimension)
 					#   pad - ensure a % sized border exists (if square is selected, this border will be incorporated)
 					#	palette - reduce image to N colour palette (indexed) image
-					#	invert - invert image
+					#	dither - dither image
 					#	alpha - export image using just alpha channel info
 					#
 					#  If only width or height is specified, aspect is maintained
 					#  If width AND height is specified, aspect is not maintained
 					#  Width or Height overrides scale
 					# 
-					asset_options = { 'scale' : 0, 'width' : 0, 'height' : 0, 'retina' : 0, 'square' : 0, 'pad' : 0, 'palette' : 16, 'invert' : 0, 'alpha' : 0 }
+					asset_options = { 'scale' : 0, 'width' : 0, 'height' : 0, 'retina' : 0, 'square' : 0, 'pad' : 0, 'palette' : 16, 'dither' : 0, 'alpha' : 0 }
 					#option_scale = 0
 					#option_width = 0
 					#option_height = 0
@@ -406,7 +406,7 @@ class AssetManager:
 						option_square = asset_options['square']
 						option_pad = asset_options['pad']
 						option_palette = asset_options['palette']
-						option_invert = asset_options['invert']
+						option_dither = asset_options['dither']
 						option_alpha = asset_options['alpha']
 						
 						# compile the image
@@ -417,22 +417,7 @@ class AssetManager:
 						if img.mode != 'RGBA' and img.mode != 'RGB':
 							img = img.convert('RGB')
 
-						# invert image if required
-						if option_invert != 0:
-							if img.mode == 'RGBA':
-								r,g,b,a = img.split()
-								rgb_image = Image.merge('RGB', (r,g,b))
 
-								inverted_image = PIL.ImageOps.invert(rgb_image)
-
-								r2,g2,b2 = inverted_image.split()
-
-								final_transparent_image = Image.merge('RGBA', (r2,g2,b2,a))
-								img = final_transparent_image
-
-							else:
-								inverted_image = PIL.ImageOps.invert(img)
-								img = inverted_image
 				
 						# create a white mask image using the source image alpha channel
 						if option_alpha != 0:
@@ -578,10 +563,10 @@ class AssetManager:
 
 						if option_palette != 0:
 							# -f --speed 1 --nofs --posterize 4 --output "quant\%%x" 16 "%%x"
-							dither_option = "-f" # "--nofs" 
 							command_line = ["pngquant"]
 							#command_line.extend(["--verbose"])
-							command_line.extend(["--nofs"])
+							if option_dither == 0:
+								command_line.extend(["--nofs"])
 							command_line.extend(["-f", "--speed", "1", "--posterize", "4"])
 							#command_line.extend(["--output", output_filename, "16", output_filename])
 							command_line.extend(["--output", output_filename, "16", "temp.png"])
@@ -603,7 +588,7 @@ class AssetManager:
 						meta_asset['square'] = option_square
 						meta_asset['pad'] = option_pad
 						meta_asset['palette'] = option_palette
-						meta_asset['invert'] = option_invert
+						meta_asset['dither'] = option_dither
 						meta_asset['alpha'] = option_alpha
 						
 						# output some metrics of processed file
@@ -637,64 +622,6 @@ class AssetManager:
 	
 	
 
-	def processLetters(self, sourcepath, targetpath = None):
-
-		files = [f for f in listdir(sourcepath) if isfile(join(sourcepath, f))]
-		print files
-		
-		image_library = []
-		max_w = 0
-		max_h = 0
-		max_s = 0
-		largest_size_id = None
-		largest_width_id = None
-		largest_height_id = None
-		for file in files:
-			filename = sourcepath + file
-
-			im = Image.open(filename)
-			w = im.size[0]
-			h = im.size[1]
-			s = w*h
-			
-			image_object = {}
-			image_object['path'] = sourcepath
-			image_object['filename'] = file
-			image_object['width'] = w
-			image_object['height'] = h
-			image_object['pixels'] = s
-			image_object['image'] = im
-			
-			image_library.append(image_object)
-
-			if w > max_w: 
-				max_w = w
-				largest_width_id = len(image_library)
-
-			if h > max_h: 
-				max_h = h
-				largest_height_id = len(image_library)		
-			
-			if s > max_s:
-				max_s = s
-				largest_size_id = len(image_library)
-
-			
-			print "'" + file + "', w=" + str(w) + " h=" + str(h)
-			data = im.getdata()
-			
-		print "Loaded " + str(len(image_library)) + " images"
-		
-		io = image_library[largest_size_id]
-		print "Largest size image is '" + io['filename'] + "', w=" + str(io['width']) + ", h=" + str(io['height'])
-		
-		io = image_library[largest_width_id]
-		print "Largest width image is '" + io['filename'] + "', w=" + str(io['width']) + ", h=" + str(io['height'])	
-
-		io = image_library[largest_height_id]
-		print "Largest height image is '" + io['filename'] + "', w=" + str(io['width']) + ", h=" + str(io['height'])	
-	
-
 		
 	
 #----------------------------------------------------------------------------------------------------------------------------
@@ -702,12 +629,6 @@ class AssetManager:
 #----------------------------------------------------------------------------------------------------------------------------
 	
 	
-
-#print "hello world"
-
 asset_manager = AssetManager("assets.json")
 asset_manager.compile()
 
-
-
-#asset_manager.processLetters("assets/_PLAIN_LETTERS_PNG/_PLAIN_LETTERS_PNG/")
