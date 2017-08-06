@@ -1,13 +1,17 @@
-LOAD_ADDR = &3000-64
-HIDE_DISPLAY = TRUE
-USE_SWR = TRUE
+LOAD_ADDR = &3000-64    ; hack, code should ideally use load address of file
 
+HIDE_DISPLAY = TRUE        ; set TRUE to hide screen until new image is available (only hides if no shadow ram available)
+ENABLE_SWR = TRUE          ; set TRUE to use SWR if available (note all images must be <16Kb in size)
+ENABLE_SHADOW = TRUE       ; set TRUE to use Shadow screen if available (makes transitions better)
+
+; ZP var allocations
 ORG 0
 INCLUDE "lib/exomiser.h.asm"
 
 .has_swr        SKIP 1
 .has_shadow     SKIP 1
 
+; EXE chunk
 ORG &1900
 GUARD LOAD_ADDR
 
@@ -18,7 +22,7 @@ INCLUDE "lib/swr.asm"
 INCLUDE "lib/shadowram.asm"
 INCLUDE "lib/disksys.asm"
 
-.load_file  EQUS "LOAD "
+;.load_file  EQUS "LOAD "
 .file_name  EQUS "A."
 .file_num   EQUS "01", 13
 
@@ -26,43 +30,90 @@ INCLUDE "lib/disksys.asm"
 
 .osfile_params			SKIP 18
 
-
-
-.main
+.clear_vram
 {
-    lda #200:ldx #3:jsr &fff4
-
-    lda #0
-    sta has_swr
-    sta has_shadow
-
-    ; detect sideways RAM if present
-IF USE_SWR
-    jsr swr_init
-    sta has_swr
-    bne no_swr
-
-
-    ; fetch & cache disk catalog
-    ;jsr disksys_fetch_catalogue    
-    
-.no_swr
-ENDIF
-
-    ; clear display memory before mode switch for clean transition
+    lda #&30
+    sta clearloop2+2
     ldy #&50
 .clearloop
     ldx #0
     txa
 .clearloop2
-    sta &3000,x
+    sta &ff00,x
     inx
     bne clearloop2
     inc clearloop2+2
     dey
-    bne clearloop
+    bne clearloop    
+    rts
+}
+
+.reset_nula
+{
+    ldx #0
+.nula_loop
+    lda nula_data,x
+    sta &fe23
+    inx
+    cpx #32
+    bne nula_loop
+    rts
+.nula_data
+    EQUB &00, &00, &1f, &00, &20, &f0, &3f, &f0, &40, &0f, &5f, &0f, &60, &ff, &7f, &ff
+    EQUB &80, &00, &8f, &00, &a0, &f0, &bf, &f0, &c0, &0f, &df, &0f, &e0, &ff, &ff, &ff
+    
+}
+
+.main
+{
+    ; full reset on break
+    lda #200:ldx #3:jsr &fff4
+
+    ; initialize
+    lda #0
+    sta has_swr
+    sta has_shadow
+
+    ; reset palette
+    lda #19:jsr &fff4
+    jsr reset_nula
+
+IF ENABLE_SWR
+    ; detect sideways RAM if present
+    jsr swr_init
+    sta has_swr
+ENDIF
+
+IF ENABLE_SHADOW
+    jsr shadow_check_master
+    bne skip_master
+    lda #1
+    sta has_shadow
+.skip_master
+ENDIF
+
+    ; clear display memory before mode switch for clean transition
+    jsr clear_vram
+
+IF ENABLE_SHADOW
+    ; clear the shadow RAM too
+    lda has_shadow
+    beq skip_shadow_clear
+
+    jsr shadow_select_ram   
+    jsr clear_vram     
+
+    ; setup double buffer
+    lda #19:jsr &fff4
+    jsr shadow_init_buffers
+
+
+.skip_shadow_clear
+ENDIF
+
 
     ; mode select
+    lda #19:jsr &fff4
     lda #22:jsr &ffee
     lda #2:jsr &ffee
 
@@ -75,7 +126,14 @@ ENDIF
 IF HIDE_DISPLAY
     ; display off
     lda #19:jsr &fff4
+
+IF ENABLE_SHADOW
+    lda has_shadow
+    bne skip_display_off
+ENDIF
+
 	sei:lda #1:sta &fe00:lda #0:sta &fe01:cli
+.skip_display_off
 ENDIF
 
     ; reset the palette memory
@@ -124,7 +182,7 @@ ENDIF
     sta osfile_params+6
 
 
-IF USE_SWR
+IF ENABLE_SWR
     ldx #&ff    ; load file to specified memory & also put file info to param block
     lda has_swr
     beq normal_load
@@ -141,7 +199,7 @@ ENDIF
     jsr &ffdd   ; osfile
 
 
-IF USE_SWR
+IF ENABLE_SWR
     lda has_swr
     beq skip_swr_load
 
@@ -169,7 +227,7 @@ ENDIF
     ldx osfile_params+2
     ldy osfile_params+3
 
-IF USE_SWR
+IF ENABLE_SWR
     ; unpack from SWR instead of main ram if SWR is present
     lda has_swr
     beq go_exo
@@ -187,17 +245,23 @@ ENDIF
     ldx osfile_params+6
     ldy osfile_params+7
 
-IF USE_SWR
-ELSE
-    ; exomizer doesn't decompress 'in place' so we have to leave a buffer, we just offset unpack address by one page to make the maths easier
-    dey
+IF ENABLE_SWR
+    ; skip the dey if SWR is detected since we're unpacking from SWR not RAM
+    lda has_swr
+    bne go_unpack
 ENDIF
 
+    ; exomizer doesn't decompress 'in place' so we have to leave a buffer, we just offset unpack address by one page to make the maths easier
+    dey
+
+.go_unpack
     jsr exo_unpack
 
+IF ENABLE_SWR
     ; no need to relocate if SWR used
     lda has_swr
     bne skip_relocate
+ENDIF
 
     ; relocate the unpacked image by one page. nasty but necessary.
 .relocate
@@ -221,6 +285,11 @@ ENDIF
 
 .skip_relocate
 
+    cli
+
+    ; wait for vsync
+    lda #19:jsr &fff4
+
     ; set palette, if present
     lda LOAD_ADDR
     beq next_image
@@ -235,17 +304,29 @@ ENDIF
     cpx #32
     bne palette_loop
 
-    cli
 
 IF HIDE_DISPLAY
     ; display on
-    lda #19:jsr &fff4
+IF ENABLE_SHADOW
+    lda has_shadow
+    bne skip_display_on
+ENDIF
+    
 	sei:lda #1:sta &fe00:lda #80:sta &fe01:cli
+.skip_display_on
+ENDIF
+
+IF ENABLE_SHADOW
+    lda has_shadow
+    beq skip_swap
+    jsr shadow_swap_buffers
+    ; skip keypress with shadow mode - no need
+    jmp next_image
+.skip_swap
 ENDIF
 
 	; wait for keypress within 2 secs
     lda #&81:ldx #200:ldy #0:jsr &fff4 ; osbyte
-
 
 .next_image
 
