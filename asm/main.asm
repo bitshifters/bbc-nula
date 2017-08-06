@@ -1,35 +1,54 @@
+; VideoNuLA Gallery Program
+; Plays back a slideshow of 16-colour MODE2 images that have been optimized for the 4096 colour palette VideoNuLA hardware mod
+; See http://stardot.org.uk/forums/viewtopic.php?f=3&t=12150 for details
+;
+; https://github.com/simondotm/bbc-nula
+;
+; This module of code is portable and is included by the main assembly file
+; It assumes that images are stored on the disk as numbered files from "A.01" to "A.NN"
+; It cycles through the numbers until it cant find one and then restarts the sequence.
+; This makes it easy to create various gallery disk images
+
+
 LOAD_ADDR = &3000-64    ; hack, code should ideally use load address of file
 
 HIDE_DISPLAY = TRUE        ; set TRUE to hide screen until new image is available (only hides if no shadow ram available)
 ENABLE_SWR = TRUE          ; set TRUE to use SWR if available (note all images must be <16Kb in size)
 ENABLE_SHADOW = TRUE       ; set TRUE to use Shadow screen if available (makes transitions better)
 
+;-------------------------------------------------------------------
 ; ZP var allocations
+;-------------------------------------------------------------------
 ORG 0
 INCLUDE "lib/exomiser.h.asm"
 
 .has_swr        SKIP 1
 .has_shadow     SKIP 1
+.osfile_params	SKIP 18
 
+;-------------------------------------------------------------------
 ; EXE chunk
-ORG &1900
+;-------------------------------------------------------------------
+ORG &1400
 GUARD LOAD_ADDR
 
 .start
 INCLUDE "lib/bbc.h.asm"
+INCLUDE "lib/disksys.asm"
 INCLUDE "lib/exomiser.asm"
 INCLUDE "lib/swr.asm"
 INCLUDE "lib/shadowram.asm"
-INCLUDE "lib/disksys.asm"
 
-;.load_file  EQUS "LOAD "
+
 .file_name  EQUS "A."
 .file_num   EQUS "01", 13
-
 .file_swr   EQUS "XX     A" ; filename used by diskloader - a quirk of how the disksys works
 
-.osfile_params			SKIP 18
 
+
+;-------------------------------------------------------
+; Clear all display memory
+;-------------------------------------------------------
 .clear_vram
 {
     lda #&30
@@ -48,6 +67,9 @@ INCLUDE "lib/disksys.asm"
     rts
 }
 
+;-------------------------------------------------------
+; Set the NULA palette back to BBC default palette.
+;-------------------------------------------------------
 .reset_nula
 {
     ldx #0
@@ -60,10 +82,150 @@ INCLUDE "lib/disksys.asm"
     rts
 .nula_data
     EQUB &00, &00, &1f, &00, &20, &f0, &3f, &f0, &40, &0f, &5f, &0f, &60, &ff, &7f, &ff
-    EQUB &80, &00, &8f, &00, &a0, &f0, &bf, &f0, &c0, &0f, &df, &0f, &e0, &ff, &ff, &ff
-    
+    EQUB &80, &00, &8f, &00, &a0, &f0, &bf, &f0, &c0, &0f, &df, &0f, &e0, &ff, &ff, &ff   
 }
 
+;-------------------------------------------------------
+; Prepare to unpack an image from the given source address
+; X,Y = Lo/Hi address of source image compressed data
+;-------------------------------------------------------
+.unpack_init
+{
+	jsr exo_init_decruncher    
+    rts
+}
+
+;-------------------------------------------------------
+; Unpack an image to a destination address
+; X,Y = Lo/Hi address of destination address
+;-------------------------------------------------------
+.unpack_image
+{
+
+    ; if we are unpacking from SWR we can do that all in one go.
+    ; if we are unpacking from main RAM we have to decompress and relocate due to the way that exomizer works.
+
+IF ENABLE_SWR
+    ; skip the dey if SWR is detected since we're unpacking from SWR not RAM
+    lda has_swr
+    bne go_unpack
+ENDIF
+
+    ; exomizer doesn't decompress 'in place' so we have to leave a buffer, we just offset unpack address by one page to make the maths easier
+    dey
+
+.go_unpack
+    jsr exo_unpack
+
+IF ENABLE_SWR
+    ; no need to relocate if SWR used
+    lda has_swr
+    bne skip_relocate
+ENDIF
+
+    ; relocate the unpacked image by one page. nasty but necessary.
+.relocate
+    lda #&7e
+    sta relocate_addr0+2
+    lda #&7f
+    sta relocate_addr1+2
+    ldx #0
+.relocate_loop
+.relocate_addr0
+    lda &ff00,x
+.relocate_addr1
+    sta &ff00,x
+    inx
+    bne relocate_loop
+    dec relocate_addr0+2
+    dec relocate_addr1+2
+    lda relocate_addr1+2
+    cmp #&2e
+    bne relocate_loop
+
+.skip_relocate    
+    rts
+}
+
+;-------------------------------------------------------
+; Begin sequence for a new image
+;-------------------------------------------------------
+.slide_begin
+{
+IF HIDE_DISPLAY
+    ; display off
+    lda #19:jsr &fff4
+
+IF ENABLE_SHADOW
+    lda has_shadow
+    bne skip_display_off
+ENDIF
+
+	sei:lda #1:sta &fe00:lda #0:sta &fe01:cli
+.skip_display_off
+ENDIF
+
+    ; reset the palette memory
+    lda #0
+    tax
+.clear_palette
+    sta LOAD_ADDR, x
+    inx
+    cpx #64
+    bne clear_palette
+
+    rts
+}
+
+.slide_show
+{
+
+    ; wait for vsync
+    lda #19:jsr &fff4
+
+    ; set palette, if present
+    lda LOAD_ADDR
+    beq no_palette
+
+    ; palette must be written in a specific sequence
+    ; 2 bytes written per palette entry
+    ldx #0
+.palette_loop
+    lda LOAD_ADDR+32,x
+    sta &fe23
+    inx
+    cpx #32
+    bne palette_loop
+
+.no_palette
+
+IF HIDE_DISPLAY
+    ; display on
+IF ENABLE_SHADOW
+    lda has_shadow
+    bne skip_display_on
+ENDIF
+    
+	sei:lda #1:sta &fe00:lda #80:sta &fe01:cli
+.skip_display_on
+ENDIF
+
+IF ENABLE_SHADOW
+    lda has_shadow
+    beq skip_swap
+    jsr shadow_swap_buffers
+.skip_swap
+ENDIF    
+
+
+
+    rts
+}
+
+
+;-------------------------------------------------------
+; Main code entry point
+;-------------------------------------------------------
 .main
 {
     ; full reset on break
@@ -121,29 +283,26 @@ ENDIF
     lda #10:sta &fe00
     lda #32:sta &FE01
 
+
+    ; show the nula logo at startup, no loading required as it is encoded into the EXE
+.show_logo
+
+    ldx #LO(logo_image_data)
+    ldy #HI(logo_image_data)
+    jsr unpack_init
+    jsr slide_begin
+    ldx #LO(LOAD_ADDR)
+    ldy #HI(LOAD_ADDR)
+    jsr unpack_image
+    jsr slide_show
+
+
+
 .load_loop
 
-IF HIDE_DISPLAY
-    ; display off
-    lda #19:jsr &fff4
+    jsr slide_begin
 
-IF ENABLE_SHADOW
-    lda has_shadow
-    bne skip_display_off
-ENDIF
 
-	sei:lda #1:sta &fe00:lda #0:sta &fe01:cli
-.skip_display_off
-ENDIF
-
-    ; reset the palette memory
-    lda #0
-    tax
-.clear_palette
-    sta LOAD_ADDR, x
-    inx
-    cpx #64
-    bne clear_palette
 
 
     ; check if the next file exists
@@ -239,91 +398,24 @@ IF ENABLE_SWR
 .go_exo
 ENDIF
 
-	jsr exo_init_decruncher    
-
+    jsr unpack_init
+   
     ; now unpack to the execute address of the loaded file
     ldx osfile_params+6
     ldy osfile_params+7
-
-IF ENABLE_SWR
-    ; skip the dey if SWR is detected since we're unpacking from SWR not RAM
-    lda has_swr
-    bne go_unpack
-ENDIF
-
-    ; exomizer doesn't decompress 'in place' so we have to leave a buffer, we just offset unpack address by one page to make the maths easier
-    dey
-
-.go_unpack
-    jsr exo_unpack
-
-IF ENABLE_SWR
-    ; no need to relocate if SWR used
-    lda has_swr
-    bne skip_relocate
-ENDIF
-
-    ; relocate the unpacked image by one page. nasty but necessary.
-.relocate
-    lda #&7e
-    sta relocate_addr0+2
-    lda #&7f
-    sta relocate_addr1+2
-    ldx #0
-.relocate_loop
-.relocate_addr0
-    lda &ff00,x
-.relocate_addr1
-    sta &ff00,x
-    inx
-    bne relocate_loop
-    dec relocate_addr0+2
-    dec relocate_addr1+2
-    lda relocate_addr1+2
-    cmp #&2e
-    bne relocate_loop
-
-.skip_relocate
+    jsr unpack_image
 
     cli
 
-    ; wait for vsync
-    lda #19:jsr &fff4
 
-    ; set palette, if present
-    lda LOAD_ADDR
-    beq next_image
+    jsr slide_show
 
-    ; palette must be written in a specific sequence
-    ; 2 bytes written per palette entry
-    ldx #0
-.palette_loop
-    lda LOAD_ADDR+32,x
-    sta &fe23
-    inx
-    cpx #32
-    bne palette_loop
-
-
-IF HIDE_DISPLAY
-    ; display on
-IF ENABLE_SHADOW
-    lda has_shadow
-    bne skip_display_on
-ENDIF
-    
-	sei:lda #1:sta &fe00:lda #80:sta &fe01:cli
-.skip_display_on
-ENDIF
 
 IF ENABLE_SHADOW
-    lda has_shadow
-    beq skip_swap
-    jsr shadow_swap_buffers
     ; skip keypress with shadow mode - no need
-    jmp next_image
-.skip_swap
-ENDIF
+    lda has_shadow
+    bne next_image
+ENDIF    
 
 	; wait for keypress within 2 secs
     lda #&81:ldx #200:ldy #0:jsr &fff4 ; osbyte
@@ -346,8 +438,11 @@ ENDIF
     rts
 }
 
-
+; include the nula logo. Try to keep this simple and small in size to maximize disk space.
+.logo_image_data
+INCBIN "output/logo/nula.png.bbc.exo"
 
 .end
 
+PRINT "Gallery program is &", ~(end-start), "bytes (", (end-start)/1024, "Kb), (", (end-start)/256, "sectors) in size"
 SAVE "!Boot", start, end, main
