@@ -572,16 +572,19 @@ class AssetManager:
 						# save the processed image
 						ext_offset = target_file.rfind('.')
 						output_filename = target_file[:ext_offset] + "." + OUTPUT_FORMAT
-						img.save(output_filename, OUTPUT_FORMAT)
-						time.sleep(0.1)	# some dodgy file access going on
+						#img.save(output_filename, OUTPUT_FORMAT)
+						img.save("temp.png", OUTPUT_FORMAT)
+						#time.sleep(0.1)	# some dodgy file access going on
 
 						if option_palette != 0:
 							# -f --speed 1 --nofs --posterize 4 --output "quant\%%x" 16 "%%x"
 							dither_option = "-f" # "--nofs" 
 							command_line = ["pngquant"]
 							#command_line.extend(["--verbose"])
+							command_line.extend(["--nofs"])
 							command_line.extend(["-f", "--speed", "1", "--posterize", "4"])
-							command_line.extend(["--output", output_filename, "16", output_filename])
+							#command_line.extend(["--output", output_filename, "16", output_filename])
+							command_line.extend(["--output", output_filename, "16", "temp.png"])
 							#print command_line
 							call(command_line)
 							#img = img.quantize(option_palette, method=2)	

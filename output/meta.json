@@ -77,6 +77,32 @@
         "square": 0,
         "width": 0
     },
+    "output/volume1/chess.png": {
+        "alpha": 0,
+        "height": 0,
+        "invert": 0,
+        "output_height": 256,
+        "output_width": 160,
+        "pad": 0,
+        "palette": 16,
+        "retina": 0,
+        "scale": 0,
+        "square": 0,
+        "width": 0
+    },
+    "output/volume1/chuckrock.png": {
+        "alpha": 0,
+        "height": 0,
+        "invert": 0,
+        "output_height": 256,
+        "output_width": 160,
+        "pad": 0,
+        "palette": 16,
+        "retina": 0,
+        "scale": 0,
+        "square": 0,
+        "width": 0
+    },
     "output/volume1/crossy.png": {
         "alpha": 0,
         "height": 0,
@@ -156,6 +182,19 @@
         "width": 0
     },
     "output/volume1/flashback.png": {
+        "alpha": 0,
+        "height": 0,
+        "invert": 0,
+        "output_height": 256,
+        "output_width": 160,
+        "pad": 0,
+        "palette": 16,
+        "retina": 0,
+        "scale": 0,
+        "square": 0,
+        "width": 0
+    },
+    "output/volume1/gng.png": {
         "alpha": 0,
         "height": 0,
         "invert": 0,
@@ -260,6 +299,19 @@
         "width": 0
     },
     "output/volume1/minecraft.png": {
+        "alpha": 0,
+        "height": 0,
+        "invert": 0,
+        "output_height": 256,
+        "output_width": 160,
+        "pad": 0,
+        "palette": 16,
+        "retina": 0,
+        "scale": 0,
+        "square": 0,
+        "width": 0
+    },
+    "output/volume1/monkey.png": {
         "alpha": 0,
         "height": 0,
         "invert": 0,

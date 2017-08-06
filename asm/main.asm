@@ -350,4 +350,4 @@ ENDIF
 
 .end
 
-SAVE "Main", start, end, main
+SAVE "!Boot", start, end, main

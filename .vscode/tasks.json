@@ -26,7 +26,7 @@
                 }
             },
             "args": [
-                "BeebAsm.exe -v -i bbcnula.asm -do bbcnula.ssd -boot Main"
+                "BeebAsm.exe -v -i bbcnula.asm -do bbcnula.ssd -opt 2"
             ],
             "isBuildCommand": true
         },
