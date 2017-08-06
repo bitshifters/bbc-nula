@@ -11,10 +11,12 @@
 
 
 LOAD_ADDR = &3000-64    ; hack, code should ideally use load address of file
+PALETTE_ADDR = LOAD_ADDR+32 ; first 32 bytes are header
 
 HIDE_DISPLAY = TRUE        ; set TRUE to hide screen until new image is available (only hides if no shadow ram available)
 ENABLE_SWR = TRUE          ; set TRUE to use SWR if available (note all images must be <16Kb in size)
 ENABLE_SHADOW = TRUE       ; set TRUE to use Shadow screen if available (makes transitions better)
+ENABLE_FADE = TRUE         ; set TRUE to use fade in/out of each image
 
 ;-------------------------------------------------------------------
 ; ZP var allocations
@@ -85,6 +87,20 @@ INCLUDE "lib/shadowram.asm"
     EQUB &80, &00, &8f, &00, &a0, &f0, &bf, &f0, &c0, &0f, &df, &0f, &e0, &ff, &ff, &ff   
 }
 
+; set entire palette to black
+.set_black_palette
+{
+    ldx #15
+.nula_loop
+    asl a:asl a:asl a:asl a
+    sta &fe23
+    lda #0
+    sta &fe23
+    dex
+    bpl nula_loop
+    rts
+}
+
 ;-------------------------------------------------------
 ; Prepare to unpack an image from the given source address
 ; X,Y = Lo/Hi address of source image compressed data
@@ -152,20 +168,33 @@ ENDIF
 ;-------------------------------------------------------
 .slide_begin
 {
-IF HIDE_DISPLAY
-    ; display off
-    lda #19:jsr &fff4
+IF ENABLE_FADE
 
 IF ENABLE_SHADOW
     lda has_shadow
     bne skip_display_off
 ENDIF
 
-	sei:lda #1:sta &fe00:lda #0:sta &fe01:cli
+    jsr palette_fade_out
 .skip_display_off
+
+ELSE
+
+    IF HIDE_DISPLAY
+        ; display off
+        lda #19:jsr &fff4
+
+    IF ENABLE_SHADOW
+        lda has_shadow
+        bne skip_display_off
+    ENDIF
+
+        sei:lda #1:sta &fe00:lda #0:sta &fe01:cli
+    .skip_display_off
+    ENDIF
 ENDIF
 
-    ; reset the palette memory
+    ; reset the header/palette store
     lda #0
     tax
 .clear_palette
@@ -177,8 +206,31 @@ ENDIF
     rts
 }
 
+
+
 .slide_show
 {
+
+IF ENABLE_FADE
+
+
+IF ENABLE_SHADOW
+    lda has_shadow
+    beq skip_swap
+
+    ; with fade enabled we first fade out the current palette
+    ; before showing the new image/palette
+    jsr palette_fade_out
+
+    jsr shadow_swap_buffers
+
+    
+.skip_swap
+ENDIF    
+
+    jsr palette_fade_in
+
+ELSE
 
     ; wait for vsync
     lda #19:jsr &fff4
@@ -217,6 +269,7 @@ IF ENABLE_SHADOW
 .skip_swap
 ENDIF    
 
+ENDIF
 
 
     rts
@@ -287,6 +340,11 @@ ENDIF
     ; show the nula logo at startup, no loading required as it is encoded into the EXE
 .show_logo
 
+    ; set palette to black to hide initial logo screen
+    lda #19:jsr &fff4
+    jsr set_black_palette
+
+    ; show the logo
     ldx #LO(logo_image_data)
     ldy #HI(logo_image_data)
     jsr unpack_init
@@ -296,7 +354,8 @@ ENDIF
     jsr unpack_image
     jsr slide_show
 
-
+	; wait for keypress within 2 secs
+    lda #&81:ldx #200:ldy #0:jsr &fff4 ; osbyte
 
 .load_loop
 
@@ -437,6 +496,137 @@ ENDIF
 
     rts
 }
+
+; Palette fader implemented using a table of interpolated levels
+; This is a brightness fader.
+; Organised as 16 brightness levels * 16 frames of animation (from dark [0] to bright [15])
+; Get the colour level of the palette for any R/G/B component, *16, then add the animation frame offset to get the new level 
+ALIGN 256
+PALETTE_LEVELS = 16
+PALETTE_FADE_STEPS = 16
+.palette_fade_table
+    FOR i, 0, PALETTE_LEVELS-1
+        a = (i+1) / PALETTE_FADE_STEPS
+        PRINT a
+        FOR n, 0, PALETTE_FADE_STEPS-1
+            EQUB a*n
+        NEXT
+    NEXT
+
+
+; we save a copy of the palette for later so that we're able to fade out the existing
+; image when the newly loaded image has overwritten LOAD_ADDR with its own palette
+; initialized as a completely black palette for all 16 colours
+.palette_copy_store   
+    FOR n, 0, 15
+        EQUW n*16
+    NEXT
+
+; called by palette_fade_in
+.palette_copy
+{
+    ldx #31
+.copy_loop 
+    lda PALETTE_ADDR,x
+    sta palette_copy_store,x
+    dex
+    bpl copy_loop
+    rts
+}
+
+;------------------------------------------------------------
+; interpolate the palette from current level to target level
+; where A=level (0-15, where 0 is zero brightness, 15 is full brightness
+;------------------------------------------------------------
+.palette_interpolate
+{
+    ; A = animation frame, 0-15
+    and #&0f
+    sta &80
+
+    ldx #0
+.palette_update_loop
+    lda palette_copy_store+0,x
+    sta &82     ; temp
+
+    ; get colour palette index, 0-15
+    and #&f0
+    sta &81     ; colour palette index
+
+    ; interpolate red
+    lda &82 ;:and #&0f    
+    asl a:asl a:asl a:asl a
+    ora &80
+    tay
+    lda palette_fade_table,y
+    ora &81
+
+    ; send [index][red] to NuLA
+    sta &fe23       
+
+    ; fetch green/blue
+    lda palette_copy_store+1,x
+    sta &82
+    
+    ; interpolate green
+    and #&f0   
+    ora &80
+    tay
+    lda palette_fade_table,y
+    asl a:asl a:asl a:asl a    
+    sta &81
+
+    ; interpolate blue
+    lda &82 ;:and #&0f    
+    asl a:asl a:asl a:asl a
+    ora &80
+    tay
+    lda palette_fade_table,y
+    ora &81
+    
+    ; send [green][blue] to NuLA    
+    sta &fe23
+
+    ; next palette entry
+    inx
+    inx
+
+    cpx #32
+    bne palette_update_loop
+
+
+    rts
+}
+
+; Animate the palette from full brightness to black
+.palette_fade_out
+{
+    lda #15:sta &84
+.fade_loop
+    lda #19:jsr &fff4
+    lda &84:jsr palette_interpolate
+    dec &84
+    bpl fade_loop
+    rts
+}
+
+; Animate the palette from black to full brightness
+.palette_fade_in
+{
+    ; stash a copy of the palette for fader use only
+    jsr palette_copy
+
+    lda #0:sta &84
+.fade_loop
+    lda #19:jsr &fff4
+    lda &84:jsr palette_interpolate
+    inc &84
+    lda &84
+    cmp #16
+    bne fade_loop
+    rts
+}
+
 
 ; include the nula logo. Try to keep this simple and small in size to maximize disk space.
 .logo_image_data

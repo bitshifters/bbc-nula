@@ -27,13 +27,14 @@
             },
             "args": [
                 "BeebAsm.exe -v -i bbcnula1.asm -do bbcnula1.ssd -opt 2"
-            ]
+            ],
+            "isBuildCommand": true
         },
         {
-            "taskName": "Run 'bbcnula2.ssd' in Emulator",
+            "taskName": "Run 'bbcnula1.ssd' in Emulator",
             "isTestCommand": true,
             "args": [
-                "B-Em.exe bbcnula2.ssd"
+                "B-Em.exe bbcnula1.ssd"
             ]
         },
         {
@@ -54,8 +55,7 @@
             },
             "args": [
                 "BeebAsm.exe -v -i bbcnula2.asm -do bbcnula2.ssd -opt 2"
-            ],
-            "isBuildCommand": true
+            ]
         }
     ]
 }
