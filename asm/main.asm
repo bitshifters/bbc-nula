@@ -74,6 +74,12 @@ INCLUDE "lib/shadowram.asm"
 ;-------------------------------------------------------
 .reset_nula
 {
+    ; reset nula state
+    lda #&40
+    sta &fe22
+
+    ; this code is probably unnecessary due to above, but included anyway
+    ; sets the nula extended palette to default beeb colours.
     ldx #0
 .nula_loop
     lda nula_data,x
@@ -624,9 +630,28 @@ PALETTE_FADE_STEPS = 16
     lda &84
     cmp #16
     bne fade_loop
+
+;    jsr reset_nula
+;    jsr set_beeb_palette
     rts
 }
 
+
+
+.set_beeb_palette
+{
+    ldx #0
+.loop
+    lda #19:jsr &ffee
+    txa:jsr &ffee
+    lda LOAD_ADDR+16,x
+    jsr &ffee
+    lda #0:jsr &ffee:jsr &ffee:jsr &ffee
+    inx
+    cpx #16
+    bne loop
+    rts
+}
 
 ; include the nula logo. Try to keep this simple and small in size to maximize disk space.
 .logo_image_data
