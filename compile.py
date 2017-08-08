@@ -16,7 +16,7 @@
 
 # options
 OUTPUT_FORMAT = "png"
-FORCE_UPDATE = True		# has to be True atm because configs dont get build properly otherwise (TODO!)
+FORCE_UPDATE = False		# has to be True atm because configs dont get build properly otherwise (TODO!)
 EXO_COMPRESS = True
 
 # bbc file format
@@ -53,7 +53,7 @@ from subprocess import call
 # http://pillow.readthedocs.io/en/3.0.x/handbook/image-file-formats.html
 
 
-def exportMode2(imagefilename, beeb_asm_config):
+def exportMode2(imagefilename):
 	image = Image.open(imagefilename)
 
 	if image.mode != "P":
@@ -95,13 +95,43 @@ def exportMode2(imagefilename, beeb_asm_config):
 	for n in range(0,12):
 		screen_data.append(0)
 
-	# bbc palette map - 16 bytes
-	for n in range(0,16):
-		screen_data.append(n & 0x07)
-
-	# nula palette map - 32 bytes
+	# get the palette for this image
 	palette = image.getpalette()	# returns 256 rgb entries, but we only use the first 16
 
+	# setup the bbc micro primary colours palette array
+	beeb_palette = [ (0,0,0), (255,0,0), (0,255,0), (255,255,0), (0,0,255), (255,0,255), (0,255,255), (255,255,255)]
+
+	# bbc palette map - 16 bytes
+	for n in range(0,16):
+		# find best fit in the beeb palette
+		r1 = palette[ n*3 + 0 ]
+		g1 = palette[ n*3 + 1 ]
+		b1 = palette[ n*3 + 2 ]
+
+		closest_colour = -1
+		max_dist = 256*256*3
+		for i in range(0,8):
+
+			p = beeb_palette[i]
+
+			r2 = p[0]
+			g2 = p[1]
+			b2 = p[2]
+
+			dist_r = abs(r1 - r2)
+			dist_g = abs(g1 - g2)
+			dist_b = abs(b1 - b2)
+			dist = (dist_r * dist_r) + (dist_g * dist_g) + (dist_b * dist_b)
+
+			if dist < max_dist:
+				max_dist = dist
+				closest_colour = i
+
+		# output the colour index for the beeb palette that is closest to the image palette
+		#print closest_colour	
+		screen_data.append(closest_colour)
+
+	# nula palette map - 32 bytes
 	for n in range(0,16):
 		i = n*16 & 0xff
 		r = (palette[ n*3 + 0 ] >> 4) & 0x0f
@@ -142,13 +172,35 @@ def exportMode2(imagefilename, beeb_asm_config):
 		# might cock up if filenames have more than 7 chars but first 7 chars are the same
 	
 
-	file_size = os.path.getsize(output_filename) 
-	exec_address = format(0x8000 - file_size, 'x')
+	#file_size = os.path.getsize(output_filename) 
+	#exec_address = format(0x8000 - file_size, 'x')
 
 
 	if EXO_COMPRESS:
 		print "Compressing with exomizer..."
 		call(["exomizer", "raw", "-q", "-m", "1024", "-c", output_filename, "-o", output_filename+".exo"])
+		# replace the loaded file with exo compressed version
+		#output_filename += ".exo"
+
+	if False:
+		# add this file to the beeb asm config - we just give them numbers for filenames to make things easier
+		file_size = os.path.getsize(output_filename) 
+		load_address = format(0x8000 - file_size, 'x')
+		
+		num_files = beeb_asm_config.count("PUTFILE") + 1
+		beeb_filename = "A." + '{num:02d}'.format(num=num_files)
+
+		config = 'PUTFILE "' + output_filename + '", "' + beeb_filename + '", &' + load_address + ', &' + exec_address + '\n'
+		beeb_asm_config += config
+
+	#return beeb_asm_config
+
+
+def updateConfig(imagefilename, beeb_asm_config):
+	output_filename = imagefilename + ".bbc"
+	file_size = os.path.getsize(output_filename) 
+	exec_address = format(0x8000 - file_size, 'x')
+	if EXO_COMPRESS:
 		# replace the loaded file with exo compressed version
 		output_filename += ".exo"
 
@@ -162,8 +214,7 @@ def exportMode2(imagefilename, beeb_asm_config):
 	config = 'PUTFILE "' + output_filename + '", "' + beeb_filename + '", &' + load_address + ', &' + exec_address + '\n'
 	beeb_asm_config += config
 
-	return beeb_asm_config
-
+	return beeb_asm_config	
 
 class AssetManager:
 
@@ -264,7 +315,9 @@ class AssetManager:
 	def compile(self):
 		print "Compiling assets..."
 		update_count = 0
-			
+		
+		config_db = {}
+
 		for assetkey in self._db_root:
 
 			asset = self._db_root[assetkey]	
@@ -282,21 +335,25 @@ class AssetManager:
 				files = [ assetkey ]
 				source_path = self._db_source_dir
 				target_path = self._db_target_dir				
-				output_dir = os.path.dirname(target_path + assetkey)
+				output_dir = os.path.dirname(target_path + assetkey) + "/"
 				#print output_dir
 				#print files
 			
+			if output_dir not in config_db:
+				config_db[output_dir] = ""
+
 			# make the target directory if it doesn't exist
 			if not os.path.exists(output_dir):
 				os.makedirs(output_dir)
 
 			# for each folder we create a beeb asm config file containing the data for each generated file
-			beeb_asm_config = ""
+			beeb_asm_config = config_db[output_dir]
 							
 			for file in files:
 			
 
 				#print "'" + file + "'"
+				#print beeb_asm_config
 				
 				# if we're processing a directory, skip any files we come across that have been added individually to the database
 				asset_file = assetkey + "/" + file
@@ -577,8 +634,9 @@ class AssetManager:
 							#img = myquantize(img, option_palette)		
 							#img = img						
 						
-							beeb_asm_config = exportMode2(output_filename, beeb_asm_config)
-
+							exportMode2(output_filename)
+							#print beeb_asm_config
+							#config_db[output_dir] = beeb_asm_config
 
 						# update meta data
 						meta_asset['scale'] = option_scale
@@ -602,19 +660,31 @@ class AssetManager:
 					
 						update_count += 1
 
-			print "Processed folder"
-			print "beebasm config " + beeb_asm_config
-			config_filename = target_path + "config.asm"
-			print "writing beebasm config file " + config_filename
-			bin_file = open(config_filename, 'w')
-			bin_file.write(beeb_asm_config)
-			bin_file.close()			
+					# update asm config
+					ext_offset = target_file.rfind('.')
+					output_filename = target_file[:ext_offset] + "." + OUTPUT_FORMAT
+					beeb_asm_config = updateConfig(output_filename, beeb_asm_config)
+					#print beeb_asm_config
+					config_db[output_dir] = beeb_asm_config
+					
+			print "Processed asset '" + assetkey + "'"
+
 
 		print "Complete - updated " + str(update_count) + " files"
 
-					
+		#print config_db
+		for config in config_db:
+			#print config + "config.asm"
+			#print config_db[config]		
+			#print	
 
-		
+			if True:
+				#print "beebasm config " + beeb_asm_config
+				config_filename = config + "config.asm"
+				print "writing beebasm config file " + config_filename
+				bin_file = open(config_filename, 'w')
+				bin_file.write(config_db[config])
+				bin_file.close()	
 		
 
 	
