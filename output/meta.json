@@ -402,22 +402,9 @@
         "square": 0,
         "width": 0
     },
-    "output/volume2/angrybirds.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
     "output/volume2/archimedes.png": {
         "alpha": 0,
-        "dither": 1,
+        "dither": 0,
         "height": 0,
         "output_height": 256,
         "output_width": 160,
@@ -454,22 +441,9 @@
         "square": 0,
         "width": 0
     },
-    "output/volume2/crossy.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
     "output/volume2/cube.png": {
         "alpha": 0,
-        "dither": 1,
+        "dither": 0,
         "height": 0,
         "output_height": 256,
         "output_width": 160,
@@ -482,20 +456,7 @@
     },
     "output/volume2/diamond.png": {
         "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
-    "output/volume2/earth.png": {
-        "alpha": 0,
-        "dither": 1,
+        "dither": 0,
         "height": 0,
         "output_height": 256,
         "output_width": 160,
@@ -519,22 +480,9 @@
         "square": 0,
         "width": 0
     },
-    "output/volume2/fashion.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
     "output/volume2/floyd.png": {
         "alpha": 0,
-        "dither": 1,
+        "dither": 0,
         "height": 0,
         "output_height": 256,
         "output_width": 160,
@@ -586,7 +534,7 @@
     },
     "output/volume2/homer.png": {
         "alpha": 0,
-        "dither": 1,
+        "dither": 0,
         "height": 0,
         "output_height": 256,
         "output_width": 160,
@@ -598,32 +546,6 @@
         "width": 0
     },
     "output/volume2/laser.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
-    "output/volume2/lenna.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
-    "output/volume2/lighthouse.png": {
         "alpha": 0,
         "dither": 1,
         "height": 0,
@@ -675,61 +597,9 @@
         "square": 0,
         "width": 0
     },
-    "output/volume2/moon.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
     "output/volume2/neon.png": {
         "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
-    "output/volume2/parrot.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
-    "output/volume2/parrots.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
-    "output/volume2/populous.png": {
-        "alpha": 0,
-        "dither": 1,
+        "dither": 0,
         "height": 0,
         "output_height": 256,
         "output_width": 160,
@@ -768,7 +638,7 @@
     },
     "output/volume2/simpsons.png": {
         "alpha": 0,
-        "dither": 1,
+        "dither": 0,
         "height": 0,
         "output_height": 256,
         "output_width": 160,
@@ -818,32 +688,6 @@
         "square": 0,
         "width": 0
     },
-    "output/volume2/test.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
-    "output/volume2/tiger.png": {
-        "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
     "output/volume2/tron.png": {
         "alpha": 0,
         "dither": 1,
@@ -872,20 +716,7 @@
     },
     "output/volume2/tut.png": {
         "alpha": 0,
-        "dither": 1,
-        "height": 0,
-        "output_height": 256,
-        "output_width": 160,
-        "pad": 0,
-        "palette": 16,
-        "retina": 0,
-        "scale": 0,
-        "square": 0,
-        "width": 0
-    },
-    "output/volume2/tut2.png": {
-        "alpha": 0,
-        "dither": 1,
+        "dither": 0,
         "height": 0,
         "output_height": 256,
         "output_width": 160,
