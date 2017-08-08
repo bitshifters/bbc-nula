@@ -1,20 +1,40 @@
 {
     "root": {
         "logo": {
-            "dither": 0,
-            "palette": 16
+            "dither": 0
         },
         "volume1": {
-            "dither": 0,
-            "palette": 16
+            "dither": 0
         },
         "volume2": {
-            "dither": 1,
-            "palette": 16
+            "dither": 1
         },
+        "volume2/archimedes.png": {
+            "dither": 0
+        },
+        "volume2/cube.png": {
+            "dither": 0
+        },        
+        "volume2/homer.png": {
+            "dither": 0
+        },   
+        "volume2/simpsons.png": {
+            "dither": 0
+        },   
+        "volume2/tut.png": {
+            "dither": 0
+        },     
+        "volume2/neon.png": {
+            "dither": 0
+        },    
+        "volume2/floyd.png": {
+            "dither": 0
+        },     
+        "volume2/diamond.png": {
+            "dither": 0
+        },                                              
         "volume3": {
-            "dither": 1,
-            "palette": 16            
+            "dither": 1         
         },
         "wip": {}
     },
