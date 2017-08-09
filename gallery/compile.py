@@ -724,7 +724,7 @@ if True:
 				f = os.path.join(root,filename) 
 				f = f.replace('\\', '/')
 				f = f.replace(rootdir, '')
-				s = "<img src='https://github.com/simondotm/bbc-nula/raw/master/gallery/output/" + f + "' width=160 height=128>"
+				s = "<img src='https://github.com/simondotm/bbc-nula/raw/master/gallery/output/" + f + "' width=160 height=128>\n"
 				gallery_md += s 
 
 	file = open(my_file, "r")
