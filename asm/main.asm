@@ -40,7 +40,7 @@ INCLUDE "lib/disksys.asm"
 INCLUDE "lib/exomiser.asm"
 INCLUDE "lib/swr.asm"
 INCLUDE "lib/shadowram.asm"
-
+INCLUDE "lib/nula.asm"
 
 .file_name  EQUS "A."
 .file_num   EQUS "01", 13
@@ -69,43 +69,8 @@ INCLUDE "lib/shadowram.asm"
     rts
 }
 
-;-------------------------------------------------------
-; Set the NULA palette back to BBC default palette.
-;-------------------------------------------------------
-.reset_nula
-{
-    ; reset nula state
-    lda #&40
-    sta &fe22
 
-    ; this code is probably unnecessary due to above, but included anyway
-    ; sets the nula extended palette to default beeb colours.
-    ldx #0
-.nula_loop
-    lda nula_data,x
-    sta &fe23
-    inx
-    cpx #32
-    bne nula_loop
-    rts
-.nula_data
-    EQUB &00, &00, &1f, &00, &20, &f0, &3f, &f0, &40, &0f, &5f, &0f, &60, &ff, &7f, &ff
-    EQUB &80, &00, &8f, &00, &a0, &f0, &bf, &f0, &c0, &0f, &df, &0f, &e0, &ff, &ff, &ff   
-}
 
-; set entire palette to black
-.set_black_palette
-{
-    ldx #15
-.nula_loop
-    asl a:asl a:asl a:asl a
-    sta &fe23
-    lda #0
-    sta &fe23
-    dex
-    bpl nula_loop
-    rts
-}
 
 ;-------------------------------------------------------
 ; Prepare to unpack an image from the given source address
@@ -181,7 +146,7 @@ IF ENABLE_SHADOW
     bne skip_display_off
 ENDIF
 
-    jsr palette_fade_out
+    jsr nula_fade_out
 .skip_display_off
 
 ELSE
@@ -226,7 +191,7 @@ IF ENABLE_SHADOW
 
     ; with fade enabled we first fade out the current palette
     ; before showing the new image/palette
-    jsr palette_fade_out
+    jsr nula_fade_out
 
     jsr shadow_swap_buffers
 
@@ -234,7 +199,7 @@ IF ENABLE_SHADOW
 .skip_swap
 ENDIF    
 
-    jsr palette_fade_in
+    jsr nula_fade_in
 
 ELSE
 
@@ -297,7 +262,7 @@ ENDIF
 
     ; reset palette
     lda #19:jsr &fff4
-    jsr reset_nula
+    jsr nula_reset
 
 IF ENABLE_SWR
     ; detect sideways RAM if present
@@ -348,7 +313,7 @@ ENDIF
 
     ; set palette to black to hide initial logo screen
     lda #19:jsr &fff4
-    jsr set_black_palette
+    jsr nula_set_black_palette
 
     ; show the logo
     ldx #LO(logo_image_data)
@@ -503,141 +468,11 @@ ENDIF
     rts
 }
 
-; Palette fader implemented using a table of interpolated levels
-; This is a brightness fader.
-; Organised as 16 brightness levels * 16 frames of animation (from dark [0] to bright [15])
-; Get the colour level of the palette for any R/G/B component, *16, then add the animation frame offset to get the new level 
-ALIGN 256
-PALETTE_LEVELS = 16
-PALETTE_FADE_STEPS = 16
-.palette_fade_table
-    FOR i, 0, PALETTE_LEVELS-1
-        a = (i+1) / PALETTE_FADE_STEPS
-        PRINT a
-        FOR n, 0, PALETTE_FADE_STEPS-1
-            EQUB a*n
-        NEXT
-    NEXT
 
 
-; we save a copy of the palette for later so that we're able to fade out the existing
-; image when the newly loaded image has overwritten LOAD_ADDR with its own palette
-; initialized as a completely black palette for all 16 colours
-.palette_copy_store   
-    FOR n, 0, 15
-        EQUW n*16
-    NEXT
-
-; called by palette_fade_in
-.palette_copy
-{
-    ldx #31
-.copy_loop 
-    lda PALETTE_ADDR,x
-    sta palette_copy_store,x
-    dex
-    bpl copy_loop
-    rts
-}
-
-;------------------------------------------------------------
-; interpolate the palette from current level to target level
-; where A=level (0-15, where 0 is zero brightness, 15 is full brightness
-;------------------------------------------------------------
-.palette_interpolate
-{
-    ; A = animation frame, 0-15
-    and #&0f
-    sta &80
-
-    ldx #0
-.palette_update_loop
-    lda palette_copy_store+0,x
-    sta &82     ; temp
-
-    ; get colour palette index, 0-15
-    and #&f0
-    sta &81     ; colour palette index
-
-    ; interpolate red
-    lda &82 ;:and #&0f    
-    asl a:asl a:asl a:asl a
-    ora &80
-    tay
-    lda palette_fade_table,y
-    ora &81
-
-    ; send [index][red] to NuLA
-    sta &fe23       
-
-    ; fetch green/blue
-    lda palette_copy_store+1,x
-    sta &82
-    
-    ; interpolate green
-    and #&f0   
-    ora &80
-    tay
-    lda palette_fade_table,y
-    asl a:asl a:asl a:asl a    
-    sta &81
-
-    ; interpolate blue
-    lda &82 ;:and #&0f    
-    asl a:asl a:asl a:asl a
-    ora &80
-    tay
-    lda palette_fade_table,y
-    ora &81
-    
-    ; send [green][blue] to NuLA    
-    sta &fe23
-
-    ; next palette entry
-    inx
-    inx
-
-    cpx #32
-    bne palette_update_loop
-
-
-    rts
-}
-
-; Animate the palette from full brightness to black
-.palette_fade_out
-{
-    lda #15:sta &84
-.fade_loop
-    lda #19:jsr &fff4
-    lda &84:jsr palette_interpolate
-    dec &84
-    bpl fade_loop
-    rts
-}
-
-; Animate the palette from black to full brightness
-.palette_fade_in
-{
-    ; stash a copy of the palette for fader use only
-    jsr palette_copy
-
-    lda #0:sta &84
-.fade_loop
-    lda #19:jsr &fff4
-    lda &84:jsr palette_interpolate
-    inc &84
-    lda &84
-    cmp #16
-    bne fade_loop
-
-;    jsr reset_nula
-;    jsr set_beeb_palette
-    rts
-}
-
-
-
+; hacky routine - reads the 'remapped' 16-byte palette from the header and calls VDU19,N,X,0,0,0
+; works on standard beebs, but problem is that on NULA beebs, the VDU19 remapping still applies.
+; not used atm
 .set_beeb_palette
 {
     ldx #0
