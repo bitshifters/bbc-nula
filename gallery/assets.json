@@ -15,12 +15,15 @@
         "volume2/cube.png": {
             "dither": 0
         },        
-        "volume2/homer.png": {
+        "wip/homer.png": {
             "dither": 0
         },   
         "volume2/simpsons.png": {
             "dither": 0
         },   
+        "volume2/ppanther.png": {
+            "dither": 0
+        },           
         "volume2/tut.png": {
             "dither": 0
         },     
@@ -36,7 +39,15 @@
         "volume3": {
             "dither": 1         
         },
-        "wip": {}
+        "wip": {
+            "dither": 1             
+        }, 
+        "wip/tomjerry.png": {
+            "dither": 0
+        },            
+        "wip/totoro.png": {
+            "dither": 0
+        }             
     },
     "source": "images/",
     "target": "output/"
