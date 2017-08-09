@@ -717,7 +717,7 @@ if True:
 		#    print os.path.join(root, directory) 
 		volume = root[root.rfind('/')+1:]
 		if len(volume) > 0:
-			gallery_md += '\n---\n### ' + volume + '\n\n<p float="left">'
+			gallery_md += '\n### ' + volume + '\n\n<p float="left">'
 
 		for filename in filenames: 
 			if filename[-4:] == '.png':
@@ -728,7 +728,7 @@ if True:
 				gallery_md += s 
 
 		if len(volume) > 0:
-			gallery_md += "\n</p>\n"
+			gallery_md += "\n</p>\n\n"
 
 	file = open(my_file, "r")
 	readme = file.read()
