@@ -727,7 +727,8 @@ if True:
 				s = '<img src="https://github.com/simondotm/bbc-nula/raw/master/gallery/output/' + f + '" width="160" height="128" /> '
 				gallery_md += s 
 
-		gallery_md += "\n</p>\n"
+		if len(volume) > 0:
+			gallery_md += "\n</p>\n"
 
 	file = open(my_file, "r")
 	readme = file.read()
