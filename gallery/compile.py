@@ -717,15 +717,17 @@ if True:
 		#    print os.path.join(root, directory) 
 		volume = root[root.rfind('/')+1:]
 		if len(volume) > 0:
-			gallery_md += "\n---\n### " + volume + "\n"
+			gallery_md += '\n---\n### ' + volume + '\n\n<p float="left">'
 
 		for filename in filenames: 
 			if filename[-4:] == '.png':
 				f = os.path.join(root,filename) 
 				f = f.replace('\\', '/')
 				f = f.replace(rootdir, '')
-				s = "<img src='https://github.com/simondotm/bbc-nula/raw/master/gallery/output/" + f + "' width=160 height=128 /> "
+				s = '<img src="https://github.com/simondotm/bbc-nula/raw/master/gallery/output/' + f + '" width="160" height="128" /> '
 				gallery_md += s 
+
+		gallery_md += "\n</p>\n"
 
 	file = open(my_file, "r")
 	readme = file.read()
