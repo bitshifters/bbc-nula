@@ -209,8 +209,8 @@ You can report any issues [here](https://github.com/simondotm/bbc-nula/issues).
 
 
 
+## Image Galleries
 
----
 
 <!-- Don't remove the meta tag below, the compile script uses it to auto-generate the thumbnails below -->
 <meta>
