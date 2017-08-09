@@ -212,11 +212,14 @@ You can report any issues [here](https://github.com/simondotm/bbc-nula/issues).
 
 ---
 
-#### !!!
-*Don't remove the \<meta\> tag or modify below here, as `compile.py` uses it to auto generate the gallery below.*
+<!-- Don't remove the <meta> tag or modify below here, as `compile.py` uses it to auto generate the gallery below. -->
 
 ## Demo Disk Gallery
 For your viewing pleasure, here are the gallery volumes I've created so far. The images below are the 16-colour MODE2 versions, and this is 100% what you actually see on a real BBC Micro with the NuLA mod installed!
+
+* **Volume 1** - Old skool 16-bit games & graphics
+* **Volume 2** - Various computer graphics & artwork
+* **Volume 3** - Famous photos and images 
 
 <meta>
 
