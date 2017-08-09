@@ -1,4 +1,4 @@
 
 
 INCLUDE "asm/main.asm"
-INCLUDE "output/volume3/config.asm"
+INCLUDE "gallery/output/volume3/config.asm"

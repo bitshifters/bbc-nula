@@ -655,7 +655,7 @@ PALETTE_FADE_STEPS = 16
 
 ; include the nula logo. Try to keep this simple and small in size to maximize disk space.
 .logo_image_data
-INCBIN "output/logo/nula.png.bbc.exo"
+INCBIN "gallery/output/logo/nula.png.bbc.exo"
 
 .end
 
