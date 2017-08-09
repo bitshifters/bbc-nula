@@ -199,6 +199,12 @@ IF ENABLE_SHADOW
 .skip_swap
 ENDIF    
 
+    ; load the palette to cache
+    ldx #LO(PALETTE_ADDR)
+    ldy #HI(PALETTE_ADDR)
+    jsr nula_load_palette
+
+    ; fade it in
     jsr nula_fade_in
 
 ELSE
@@ -210,6 +216,12 @@ ELSE
     lda LOAD_ADDR
     beq no_palette
 
+    ldx #LO(PALETTE_ADDR)
+    ldy #HI(PALETTE_ADDR)
+    jsr nula_set_palette
+
+IF 0
+
     ; palette must be written in a specific sequence
     ; 2 bytes written per palette entry
     ldx #0
@@ -219,6 +231,7 @@ ELSE
     inx
     cpx #32
     bne palette_loop
+ENDIF
 
 .no_palette
 

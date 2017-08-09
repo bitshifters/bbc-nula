@@ -70,17 +70,45 @@ PALETTE_FADE_STEPS = 16
     NEXT
 
 ; called by palette_fade_in
-.nula_init_palette
-{
 
+; initialise the local copy of a NULA compatible palette (32 bytes)
+; X/Y = Lo/Hi address of palette to be initialized
+; Does NOT set the palette.
+.nula_load_palette
+{
+    stx copy_loop+1
+    sty copy_loop+2
+    ldx #31
+.copy_loop 
+    lda &ffff,x                 ; modified
+    sta nula_palette_store,x
+    dex
+    bpl copy_loop
     rts
 }
 
+; set the NULA palette to hardware
+; X/Y = Lo/Hi address of palette to be initialized
+; call this during a vsync for best results.
+; copies the palette to local cache
 .nula_set_palette
 {
+    stx palette_loop+1
+    sty palette_loop+2    
+    ; palette must be written in a specific sequence
+    ; 2 bytes written per palette entry
+    ldx #0
+.palette_loop
+    lda &ffff,x                 ; modified
+    sta nula_palette_store,x
+    sta &fe23
+    inx
+    cpx #32
+    bne palette_loop    
     rts
 }
 
+IF 0
 .palette_copy
 {
     ldx #31
@@ -91,12 +119,13 @@ PALETTE_FADE_STEPS = 16
     bpl copy_loop
     rts
 }
+ENDIF
 
 ;------------------------------------------------------------
 ; interpolate the palette from current level to target level
 ; where A=level (0-15, where 0 is zero brightness, 15 is full brightness
 ;------------------------------------------------------------
-.palette_interpolate
+.nula_palette_interpolate
 {
     ; A = animation frame, 0-15
     and #&0f
@@ -162,7 +191,7 @@ PALETTE_FADE_STEPS = 16
     lda #15:sta &84
 .fade_loop
     lda #19:jsr &fff4
-    lda &84:jsr palette_interpolate
+    lda &84:jsr nula_palette_interpolate
     dec &84
     bpl fade_loop
     rts
@@ -171,13 +200,15 @@ PALETTE_FADE_STEPS = 16
 ; Animate the palette from black to full brightness
 .nula_fade_in
 {
+IF 0
     ; stash a copy of the palette for fader use only
     jsr palette_copy
+ENDIF 
 
     lda #0:sta &84
 .fade_loop
     lda #19:jsr &fff4
-    lda &84:jsr palette_interpolate
+    lda &84:jsr nula_palette_interpolate
     inc &84
     lda &84
     cmp #16
