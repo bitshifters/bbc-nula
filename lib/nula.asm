@@ -27,11 +27,14 @@ ELSE
 ENDIF
 }
 
+;-----------------------------------------------------
 ; set entire palette to black
+;-----------------------------------------------------
 .nula_set_black_palette
 {
     ldx #15
 .nula_loop
+    txa
     asl a:asl a:asl a:asl a
     sta &fe23
     lda #0
@@ -43,7 +46,9 @@ ENDIF
 
 
 
-
+;-----------------------------------------------------
+; Palette fader table
+;-----------------------------------------------------
 ; Palette fader implemented using a table of interpolated levels
 ; This is a brightness fader.
 ; Organised as 16 brightness levels * 16 frames of animation (from dark [0] to bright [15])
@@ -61,19 +66,23 @@ PALETTE_FADE_STEPS = 16
     NEXT
 
 
-; we save a copy of the palette for later so that we're able to fade out the existing
-; image when the newly loaded image has overwritten LOAD_ADDR with its own palette
+;-----------------------------------------------------
+; Nula Palette local store
+;-----------------------------------------------------
+; we save a copy of the palette whenever it is set, so that we're able to fade out/in easily
 ; initialized as a completely black palette for all 16 colours
 .nula_palette_store
     FOR n, 0, 15
         EQUW n*16
     NEXT
 
-; called by palette_fade_in
 
+
+;-----------------------------------------------------
 ; initialise the local copy of a NULA compatible palette (32 bytes)
+;-----------------------------------------------------
 ; X/Y = Lo/Hi address of palette to be initialized
-; Does NOT set the palette.
+; Does NOT actually set the palette.
 .nula_load_palette
 {
     stx copy_loop+1
@@ -87,10 +96,18 @@ PALETTE_FADE_STEPS = 16
     rts
 }
 
+
+
+
+
+
+
+;-----------------------------------------------------
 ; set the NULA palette to hardware
+;-----------------------------------------------------
 ; X/Y = Lo/Hi address of palette to be initialized
 ; call this during a vsync for best results.
-; copies the palette to local cache
+; also copies the palette to local cache
 .nula_set_palette
 {
     stx palette_loop+1
@@ -108,18 +125,6 @@ PALETTE_FADE_STEPS = 16
     rts
 }
 
-IF 0
-.palette_copy
-{
-    ldx #31
-.copy_loop 
-    lda PALETTE_ADDR,x
-    sta nula_palette_store,x
-    dex
-    bpl copy_loop
-    rts
-}
-ENDIF
 
 ;------------------------------------------------------------
 ; interpolate the palette from current level to target level
@@ -185,7 +190,9 @@ ENDIF
     rts
 }
 
+;-----------------------------------------------------
 ; Animate the palette from full brightness to black
+;-----------------------------------------------------
 .nula_fade_out
 {
     lda #15:sta &84
@@ -197,14 +204,11 @@ ENDIF
     rts
 }
 
-; Animate the palette from black to full brightness
+;-----------------------------------------------------
+; Animate the palette from black to full brightness - uses the local palette store
+;-----------------------------------------------------
 .nula_fade_in
 {
-IF 0
-    ; stash a copy of the palette for fader use only
-    jsr palette_copy
-ENDIF 
-
     lda #0:sta &84
 .fade_loop
     lda #19:jsr &fff4
@@ -214,7 +218,6 @@ ENDIF
     cmp #16
     bne fade_loop
 
-;    jsr nula_reset
-;    jsr set_beeb_palette
+
     rts
 }

@@ -199,13 +199,17 @@ IF ENABLE_SHADOW
 .skip_swap
 ENDIF    
 
-    ; load the palette to cache
+    ; stash the new images' palette to cache
     ldx #LO(PALETTE_ADDR)
     ldy #HI(PALETTE_ADDR)
     jsr nula_load_palette
 
     ; fade it in
     jsr nula_fade_in
+
+; experimental - tried to test the beeb remap but not working
+;    jsr nula_reset
+;    jsr set_beeb_palette
 
 ELSE
 
@@ -219,19 +223,6 @@ ELSE
     ldx #LO(PALETTE_ADDR)
     ldy #HI(PALETTE_ADDR)
     jsr nula_set_palette
-
-IF 0
-
-    ; palette must be written in a specific sequence
-    ; 2 bytes written per palette entry
-    ldx #0
-.palette_loop
-    lda LOAD_ADDR+32,x
-    sta &fe23
-    inx
-    cpx #32
-    bne palette_loop
-ENDIF
 
 .no_palette
 
