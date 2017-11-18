@@ -13,20 +13,40 @@
 LOAD_ADDR = &3000-64    ; hack, code should ideally use load address of file
 PALETTE_ADDR = LOAD_ADDR+32 ; first 32 bytes are header
 
+_RELEASE = TRUE ; TRUE overrides the defines below
+
+IF _RELEASE
+
+; "Release" build config
 HIDE_DISPLAY = TRUE        ; set TRUE to hide screen until new image is available (only hides if no shadow ram available)
 ENABLE_SWR = TRUE          ; set TRUE to use SWR if available (note all images must be <16Kb in size)
 ENABLE_SHADOW = TRUE       ; set TRUE to use Shadow screen if available (makes transitions better)
 ENABLE_FADE = TRUE         ; set TRUE to use fade in/out of each image
 
+ELSE
+
+; "Test" build config
+HIDE_DISPLAY = FALSE        ; set TRUE to hide screen until new image is available (only hides if no shadow ram available)
+ENABLE_SWR = FALSE          ; set TRUE to use SWR if available (note all images must be <16Kb in size)
+ENABLE_SHADOW = FALSE       ; set TRUE to use Shadow screen if available (makes transitions better)
+ENABLE_FADE = FALSE         ; set TRUE to use fade in/out of each image
+
+ENDIF ; _RELEASE
+
+OSFILE_WORKAROUND = TRUE   ; OSFIND is being awkward on SmartSPI systems
+
 ;-------------------------------------------------------------------
 ; ZP var allocations
 ;-------------------------------------------------------------------
-ORG 0
+ORG &00
+GUARD &8F
+
 INCLUDE "lib/exomiser.h.asm"
 
 .has_swr        SKIP 1
 .has_shadow     SKIP 1
 .osfile_params	SKIP 18
+.temp_zp        SKIP 2  
 
 ;-------------------------------------------------------------------
 ; EXE chunk
@@ -42,6 +62,7 @@ INCLUDE "lib/swr.asm"
 INCLUDE "lib/shadowram.asm"
 INCLUDE "lib/nula.asm"
 
+.file_os    EQUS "LOAD "
 .file_name  EQUS "A."
 .file_num   EQUS "01", 13
 .file_swr   EQUS "XX     A" ; filename used by diskloader - a quirk of how the disksys works
@@ -311,6 +332,10 @@ ENDIF
     lda #10:sta &fe00
     lda #32:sta &FE01
 
+IF OSFILE_WORKAROUND
+    ; load & cache the disk catalogue - dont change disk though! :)
+    jsr disksys_read_catalogue    
+ENDIF
 
     ; show the nula logo at startup, no loading required as it is encoded into the EXE
 .show_logo
@@ -337,7 +362,94 @@ ENDIF
     jsr slide_begin
 
 
+IF OSFILE_WORKAROUND
 
+    ; copy filename
+    lda file_num+0
+    sta file_swr+0
+    lda file_num+1
+    sta file_swr+1
+
+    ldx #LO(file_swr)
+    ldy #HI(file_swr)
+    jsr disksys_find_file
+    bpl file_exists
+
+    ; reset sequence if not
+    lda #'0'
+    sta file_num+0
+    lda #'1'
+    sta file_num+1
+    jmp load_loop
+
+.file_exists
+
+    ; got file ID in A
+    ; get the file info into X,Y
+    jsr disksys_file_info
+
+    ; X,Y point to file attribute block address
+    ; first 2 bytes are the load address conveniently
+    stx temp_zp+0
+    sty temp_zp+1
+
+    ; stash the load address LO/HI byte in the osfile param block so that post load unpack code below works ok.
+    ldy #0
+    lda (temp_zp),y
+    sta osfile_params+2
+    iny
+    lda (temp_zp),y
+    sta osfile_params+3
+
+    ; stash the exec address LO/HI byte in the osfile param block too.
+    iny
+    lda (temp_zp),y
+    sta osfile_params+6
+    iny
+    lda (temp_zp),y
+    sta osfile_params+7
+
+
+IF ENABLE_SWR
+    lda has_swr
+    beq skip_swr_load
+
+
+    ; page in SWR slot 0
+    lda #0
+    jsr swr_select_slot
+
+    ; load to SWR address &8000
+    lda #&80
+    ldx #LO(file_swr)
+    ldy #HI(file_swr)
+    jsr disksys_load_file
+
+    lda #0
+    sta osfile_params+2
+    lda #&80
+    sta osfile_params+3
+
+    jmp load_complete
+.skip_swr_load
+ENDIF
+
+    ; otherwise use standard OS *LOAD to file's load address
+    ldx #LO(file_os)
+    ldy #HI(file_os)
+    jsr &fff7 ; oscli *LOAD
+
+
+.load_complete
+
+
+	; wait for keypress within 2 secs
+    lda #&81:ldx #200:ldy #0:jsr &fff4 ; osbyte
+
+
+
+;---------------------------------------------------------------
+ELSE
 
     ; check if the next file exists
     ; we use OSFIND because unlike OSFILE it doesn't cause an exception on missing files.
@@ -411,8 +523,13 @@ IF ENABLE_SWR
     ldy #HI(file_swr)
     jsr disksys_load_file
 
+
+
 .skip_swr_load
 ENDIF
+
+ENDIF ; OSFILE_WORKAROUND
+
 
     sei
 
@@ -437,6 +554,7 @@ ENDIF
     ; now unpack to the execute address of the loaded file
     ldx osfile_params+6
     ldy osfile_params+7
+
     jsr unpack_image
 
     cli

@@ -29,9 +29,20 @@ EXO_buffer_end = EXO_buffer_start + EXO_buffer_len
 ; Located at spare OS memory page &0d02 - 0x0d9f reserved for Econet/Trackball/NMI
 ; RTI (&40) is written to &0d00 for clean NMI handler
 ; -------------------------------------------------------------------
+; Note that page 13 is used by SmartSPI as workspace RAM, so not safe to put EXO buffer here anymore.
+
+SMART_SPI_FIX = TRUE
+
 
 EXO_TABL_SIZE = 156
+
+IF SMART_SPI_FIX
+exo_tabl_bi  = &0cff - EXO_TABL_SIZE
+ELSE
 exo_tabl_bi  = &0d9f - EXO_TABL_SIZE
+ENDIF
+
+
 exo_tabl_lo = exo_tabl_bi + 52
 exo_tabl_hi = exo_tabl_bi + 104
 

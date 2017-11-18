@@ -69,9 +69,12 @@ EXO_crunch_byte_hi = exo_get_crunched_byte + 2
 ; -------------------------------------------------------------------
 .exo_init_decruncher				; pass in address of (crunched data-1) in X,Y
 {
+IF SMART_SPI_FIX
+	; EXO buffer has been relocated from &0D00 so no need to hack NMI stuff
+ELSE
 	lda #&40					; Ensure RTI at &0D00 for clean NMI handling
 	sta &0D00					; should possibly call *fx143,12 to claim NMI ownership also
-	
+ENDIF
 	
 	
 	stx EXO_crunch_byte_lo
